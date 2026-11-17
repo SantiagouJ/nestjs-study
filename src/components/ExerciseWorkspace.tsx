@@ -16,11 +16,14 @@ import {
   ChevronDownIcon,
   ClockIcon,
   EyeIcon,
+  GlobeIcon,
   LightbulbIcon,
   PlayIcon,
   RotateCcwIcon,
   XIcon,
 } from "./icons";
+import FrontendPreview from "./FrontendPreview";
+import { canPreview } from "@/lib/preview/routes";
 import Sidebar, { SidebarToggle } from "./Sidebar";
 import TestPanel from "./TestPanel";
 import type { Exercise, ExerciseFile, Topic } from "@/lib/types";
@@ -34,6 +37,7 @@ interface ExerciseWorkspaceProps {
   exercise: Exercise;
   topic: Topic;
   topics: Topic[];
+  showApi?: boolean;
 }
 
 const MIN_PANEL_HEIGHT = 160;
@@ -57,6 +61,7 @@ export default function ExerciseWorkspace({
   exercise,
   topic,
   topics,
+  showApi = true,
 }: ExerciseWorkspaceProps) {
   const [contents, setContents] = useState<Record<string, string>>(() =>
     initialContents(exercise.files),
@@ -70,6 +75,20 @@ export default function ExerciseWorkspace({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [showSolution, setShowSolution] = useState(false);
+  const previewable = useMemo(
+    () =>
+      canPreview(
+        Object.fromEntries(
+          exercise.files.map((file) => [file.path, file.content]),
+        ),
+      ),
+    [exercise.files],
+  );
+  const [previewOpen, setPreviewOpen] = useState(previewable);
+
+  useEffect(() => {
+    setPreviewOpen(previewable);
+  }, [exercise.id, previewable]);
   const [solutionPath, setSolutionPath] = useState<string | null>(null);
   const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -319,6 +338,22 @@ export default function ExerciseWorkspace({
               <RotateCcwIcon size={13} />
             </button>
 
+            {previewable && (
+              <button
+                onClick={() => setPreviewOpen((value) => !value)}
+                title="Vista previa del frontend"
+                className={[
+                  "flex h-7 items-center gap-1.5 rounded-md px-2 text-[12px] transition-colors",
+                  previewOpen
+                    ? "bg-elevated text-ink"
+                    : "text-ink-3 hover:bg-hover hover:text-ink-2",
+                ].join(" ")}
+              >
+                <GlobeIcon size={13} />
+                <span className="hidden sm:inline">Vista</span>
+              </button>
+            )}
+
             <button
               onClick={() => void runner.runTests()}
               disabled={runner.busy}
@@ -364,25 +399,37 @@ export default function ExerciseWorkspace({
 
         {/* Tabs + editor + panel inferior */}
         <div className="flex min-h-0 flex-1 flex-col">
-          <EditorTabs
-            openFiles={openFiles}
-            activePath={activePath}
-            onSelect={selectFile}
-            onClose={closeFile}
-          />
-
-          <div className="min-h-0 flex-1">
-            {activeFile ? (
-              <CodeEditor
-                key={activeFile.path}
-                file={activeFile}
-                content={activeContent}
-                onChange={handleChange(activeFile.path)}
+          <div className="flex min-h-0 flex-1">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <EditorTabs
+                openFiles={openFiles}
+                activePath={activePath}
+                onSelect={selectFile}
+                onClose={closeFile}
               />
-            ) : (
-              <div className="flex h-full items-center justify-center text-[13px] text-ink-3">
-                Selecciona un archivo para editar
+
+              <div className="min-h-0 flex-1">
+                {activeFile ? (
+                  <CodeEditor
+                    key={activeFile.path}
+                    file={activeFile}
+                    content={activeContent}
+                    onChange={handleChange(activeFile.path)}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[13px] text-ink-3">
+                    Selecciona un archivo para editar
+                  </div>
+                )}
               </div>
+            </div>
+
+            {previewOpen && previewable && (
+              <FrontendPreview
+                key={exercise.id}
+                exerciseId={exercise.id}
+                files={contents}
+              />
             )}
           </div>
 
@@ -396,7 +443,7 @@ export default function ExerciseWorkspace({
           </div>
 
           <div style={{ height: panelHeight }} className="shrink-0">
-            <TestPanel exercise={exercise} runner={runner} />
+            <TestPanel exercise={exercise} runner={runner} showApi={showApi} />
           </div>
         </div>
       </div>

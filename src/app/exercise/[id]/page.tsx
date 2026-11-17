@@ -1,6 +1,11 @@
 import { Suspense } from "react";
 import ExerciseWorkspace from "@/components/ExerciseWorkspace";
-import { allExercises, getExercise, getTopic, track } from "@/data/track";
+import {
+  allExercises,
+  getExercise,
+  getTopic,
+  getTrackByTopic,
+} from "@/data/catalog";
 import { notFound } from "next/navigation";
 
 export function generateStaticParams() {
@@ -37,8 +42,9 @@ async function ExerciseContent({
   }
 
   const topic = getTopic(exercise.topicId);
+  const owner = getTrackByTopic(exercise.topicId);
 
-  if (!topic) {
+  if (!topic || !owner) {
     notFound();
   }
 
@@ -47,7 +53,8 @@ async function ExerciseContent({
       key={exercise.id}
       exercise={exercise}
       topic={topic}
-      topics={track.topics}
+      topics={owner.topics}
+      showApi={owner.id === "nestjs"}
     />
   );
 }

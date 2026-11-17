@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NestJS Study — Practica NestJS con TypeORM",
+  title: "Codin — NestJS y Next.js",
   description:
-    "Plataforma de ejercicios para aprender NestJS con repositorios TypeORM: entidades, relaciones, CRUD, servicios, validación y pruebas unitarias.",
+    "Ejercicios en el navegador para NestJS con TypeORM y para Next.js conectado a una API: componentes, sesión, filtros, detalle y reglas del backend.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -104,6 +104,8 @@ function RunSteps({ runner }: { runner: RunnerApi }) {
 interface TestPanelProps {
   exercise: Exercise;
   runner: RunnerApi;
+  /** El probador HTTP solo aplica al track de NestJS, que sí arranca la API. */
+  showApi?: boolean;
 }
 
 function basename(path: string): string {
@@ -157,8 +159,13 @@ function AssertionRow({ assertion }: { assertion: JestAssertionResult }) {
  * Panel inferior: tests de Jest, consola del WebContainer
  * y probador de endpoints contra el servidor NestJS.
  */
-export default function TestPanel({ exercise, runner }: TestPanelProps) {
+export default function TestPanel({
+  exercise,
+  runner,
+  showApi = true,
+}: TestPanelProps) {
   const [activeTab, setActiveTab] = useState<PanelTab>("tests");
+  const visibleTabs = tabs.filter((tab) => showApi || tab.id !== "api");
 
   // Consola: autoscroll
   const consoleRef = useRef<HTMLDivElement>(null);
@@ -180,7 +187,7 @@ export default function TestPanel({ exercise, runner }: TestPanelProps) {
     <div className="flex h-full flex-col bg-panel">
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-line px-3 py-1.5">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}

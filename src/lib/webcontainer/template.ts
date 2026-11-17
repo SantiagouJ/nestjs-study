@@ -28,6 +28,8 @@ const packageJson = `{
     "class-validator": "^0.14.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "sql.js": "^1.12.0",
     "typeorm": "^0.3.24"
   },
@@ -37,8 +39,11 @@ const packageJson = `{
     "@types/express": "^5.0.3",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
     "@types/sql.js": "^1.4.9",
     "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
     "ts-jest": "^29.4.0",
     "typescript": "^5.7.3"
   }
@@ -63,7 +68,9 @@ const tsconfigJson = `{
     "noImplicitAny": true,
     "strictBindCallApply": true,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true
   }
 }
 `;
@@ -90,7 +97,16 @@ module.exports = {
   testEnvironment: "node",
   roots: ["<rootDir>/src"],
   testMatch: ["**/*.spec.ts"],
-  moduleFileExtensions: ["ts", "js", "json"],
+  moduleFileExtensions: ["ts", "tsx", "js", "json"],
+  moduleNameMapper: {
+    "^next/headers$": "<rootDir>/src/shims/next-headers.ts",
+    "^next/navigation$": "<rootDir>/src/shims/next-navigation.ts",
+    "^next/link$": "<rootDir>/src/shims/next-link.tsx",
+    "^next/dist/client/components/navigation$": "<rootDir>/src/shims/next-navigation.ts",
+    "^next/dist/server/request/cookies$": "<rootDir>/src/shims/next-headers.ts",
+    "^server-only$": "<rootDir>/src/shims/server-only.ts",
+    "\\\\.(css)$": "<rootDir>/src/shims/css-module.ts",
+  },
   transform: {
     "^.+\\\\.tsx?$": ["ts-jest", { isolatedModules: true }],
   },
@@ -111,6 +127,125 @@ async function bootstrap() {
 bootstrap();
 `;
 
+const shimSession = `type StoredCookie = {
+  name: string;
+  value: string;
+  options?: Record<string, unknown>;
+};
+
+const jar = new Map<string, StoredCookie>();
+
+export class RedirectError extends Error {
+  path: string;
+
+  constructor(path: string) {
+    super(path);
+    this.name = "RedirectError";
+    this.path = path;
+  }
+}
+
+export class NotFoundError extends Error {
+  constructor() {
+    super("NEXT_NOT_FOUND");
+    this.name = "NotFoundError";
+  }
+}
+
+export function __resetSession() {
+  jar.clear();
+  const g = globalThis as { __refreshCount?: number; __pushed?: string };
+  g.__refreshCount = 0;
+  g.__pushed = undefined;
+}
+
+export function __seedCookie(name: string, value: string) {
+  jar.set(name, { name, value });
+}
+
+export function __readCookie(name: string) {
+  return jar.get(name);
+}
+
+export function __refreshCount() {
+  return (globalThis as { __refreshCount?: number }).__refreshCount ?? 0;
+}
+
+export async function cookies() {
+  return {
+    get(name: string) {
+      return jar.get(name);
+    },
+    set(name: string, value: string, options?: Record<string, unknown>) {
+      jar.set(name, { name, value, options });
+    },
+    delete(name: string) {
+      jar.delete(name);
+    },
+  };
+}
+
+export function redirect(path: string): never {
+  throw new RedirectError(path);
+}
+
+export function notFound(): never {
+  throw new NotFoundError();
+}
+
+export function useRouter() {
+  return {
+    refresh() {
+      const g = globalThis as { __refreshCount?: number };
+      g.__refreshCount = (g.__refreshCount ?? 0) + 1;
+    },
+    push(path: string) {
+      (globalThis as { __pushed?: string }).__pushed = path;
+    },
+  };
+}
+`;
+
+const shimNextHeaders = `export { cookies } from "./session";
+`;
+
+const shimNextNavigation = `export { notFound, redirect, useRouter } from "./session";
+`;
+
+const shimNextLink = `import type { ReactNode } from "react";
+
+export default function Link({
+  href,
+  children,
+  ...rest
+}: {
+  href: string;
+  children?: ReactNode;
+  [key: string]: unknown;
+}) {
+  return (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  );
+}
+`;
+
+const shimServerOnly = `export {};
+`;
+
+const shimCssModule = `const styles: Record<string, string> = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      return String(prop);
+    },
+  },
+);
+
+export default styles;
+`;
+
 /** Identifica la instalación. Cambia cuando cambia el package.json del contenedor. */
 export function dependencyCacheKey(): string {
   let hash = 5381;
@@ -127,6 +262,12 @@ export const baseFiles: ProjectFile[] = [
   { path: "nest-cli.json", content: nestCliJson },
   { path: "jest.config.js", content: jestConfigJs },
   { path: "src/main.ts", content: mainTs },
+  { path: "src/shims/session.ts", content: shimSession },
+  { path: "src/shims/next-headers.ts", content: shimNextHeaders },
+  { path: "src/shims/next-navigation.ts", content: shimNextNavigation },
+  { path: "src/shims/next-link.tsx", content: shimNextLink },
+  { path: "src/shims/server-only.ts", content: shimServerOnly },
+  { path: "src/shims/css-module.ts", content: shimCssModule },
 ];
 
 /* ------------------------------------------------------------------ */

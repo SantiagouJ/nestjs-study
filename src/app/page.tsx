@@ -1,36 +1,38 @@
 import ExerciseRow from "@/components/ExerciseRow";
-import { exerciseCount, track } from "@/data/track";
-
-const totalMinutes = track.topics.reduce(
-  (sum, topic) =>
-    sum + topic.exercises.reduce((acc, ex) => acc + ex.minutes, 0),
-  0,
-);
+import { tracks } from "@/data/catalog";
 
 /**
- * Página de inicio: visión general del track
- * con temas y ejercicios (estilo Notion / Affine).
+ * Página de inicio: un catálogo por track
+ * (NestJS y, cuando está cargado, Next.js con backend).
  */
 export default function HomePage() {
+  const exerciseCount = tracks.reduce(
+    (sum, item) =>
+      sum + item.topics.reduce((acc, topic) => acc + topic.exercises.length, 0),
+    0,
+  );
+
   return (
     <div className="min-h-screen">
-      {/* Hero */}
       <header className="border-b border-line">
         <div className="mx-auto max-w-4xl px-6 py-16 sm:py-20">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-3">
-            Track · Backend
+            Plataforma de práctica
           </p>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-[40px]">
-            {track.title}
+            NestJS y Next.js
           </h1>
-          <p className="mt-2 text-[15px] text-ink-2">{track.tagline}</p>
+          <p className="mt-2 text-[15px] text-ink-2">
+            Backend con TypeORM y frontend conectado a esa API.
+          </p>
           <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-ink-2">
-            {track.description}
+            El track de NestJS construye la API. El de Next.js arma la
+            interfaz que la consume: componentes, sesión, filtros y los
+            ejercicios de cierre del preparcial.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-ink-3">
-            <span>{track.topics.length} temas</span>
+            <span>{tracks.length} tracks</span>
             <span>{exerciseCount} ejercicios</span>
-            <span>~{totalMinutes} min de práctica</span>
             <span className="rounded-full border border-line px-2 py-0.5">
               Fácil → Medio
             </span>
@@ -38,9 +40,23 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Temas y ejercicios */}
       <main className="mx-auto max-w-4xl px-6 py-10">
-        {track.topics.map((topic) => (
+        {tracks.map((track) => (
+          <div key={track.id} id={track.id} className="mb-16">
+            <div className="mb-8 border-b border-line pb-6">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-ink-3">
+                Track
+              </p>
+              <h2 className="mt-2 text-[28px] font-semibold tracking-tight">
+                {track.title}
+              </h2>
+              <p className="mt-1 text-[14px] text-ink-2">{track.tagline}</p>
+              <p className="mt-3 max-w-2xl text-[13px] leading-relaxed text-ink-2">
+                {track.description}
+              </p>
+            </div>
+
+            {track.topics.map((topic) => (
           <section key={topic.id} className="mb-12">
             <div className="px-4 pb-3">
               <p className="text-[11px] font-medium text-ink-3">
@@ -65,14 +81,15 @@ export default function HomePage() {
               ))}
             </div>
           </section>
+            ))}
+          </div>
         ))}
       </main>
 
       <footer className="border-t border-line">
         <div className="mx-auto max-w-4xl px-6 py-8 text-[11px] leading-relaxed text-ink-3">
-          NestJS Study — plataforma de estudio inspirada en Scrimba, Notion y
-          Affine. Ejercicios basados en el camino de repositorios de tu
-          curso.
+          Practica NestJS y Next.js en el navegador. El frontend no reemplaza
+          la API: la consulta, filtra y muestra lo que el backend autoriza.
         </div>
       </footer>
     </div>

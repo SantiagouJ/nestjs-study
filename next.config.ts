@@ -16,6 +16,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
+    resolveAlias: {
+      "esbuild-wasm": "esbuild-wasm/lib/browser.js",
+    },
     rules: {
       "*.css": {
         loaders: ["@tailwindcss/turbopack"],
